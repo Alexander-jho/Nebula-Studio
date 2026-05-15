@@ -3,9 +3,10 @@ import { Sparkles, Layout, Video, Image as ImageIcon, MousePointer2, Share2, Lay
 
 interface LandingPageProps {
   onLogin: () => void;
+  onGuestMode: () => void;
 }
 
-export function LandingPage({ onLogin }: LandingPageProps) {
+export function LandingPage({ onLogin, onGuestMode }: LandingPageProps) {
   return (
     <div className="min-h-screen bg-[#050505] text-[#E0E0E0] selection:bg-[#8B5CF6]/30 overflow-hidden font-sans">
       {/* Background Orbs */}
@@ -60,11 +61,14 @@ export function LandingPage({ onLogin }: LandingPageProps) {
               onClick={onLogin}
               className="px-8 py-4 bg-[#6366F1] text-white rounded-xl font-bold text-lg hover:bg-opacity-90 transition-all shadow-xl shadow-indigo-600/20 active:scale-95 group"
             >
-              Crea tu primer diseño
+              Iniciar sesión
               <MousePointer2 className="inline ml-2 w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
             </button>
-            <button className="px-8 py-4 bg-[#111114] text-white rounded-xl font-bold text-lg hover:bg-[#1A1A1E] transition-all border border-[#222] active:scale-95">
-              Explore Templates
+            <button 
+              onClick={onGuestMode}
+              className="px-8 py-4 bg-[#111114] text-white rounded-xl font-bold text-lg hover:bg-[#1A1A1E] transition-all border border-[#222] active:scale-95"
+            >
+              Comenzar como invitado
             </button>
           </div>
         </motion.div>

@@ -42,7 +42,7 @@ export function TopBar({ canvas }: TopBarProps) {
     try {
       const json = canvas.toJSON();
       const thumbnail = canvas.toDataURL({ multiplier: 0.1 });
-      await projectService.saveProject(activeProject.id, json, thumbnail);
+      await projectService.saveProject(activeProject.id, json, thumbnail, activeProject.ownerId);
       toast.success('Cambios guardados');
     } catch (err) {
       toast.error('Error al guardar');

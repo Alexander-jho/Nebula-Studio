@@ -13,15 +13,13 @@ export function Dashboard() {
   const [loadingProjects, setLoadingProjects] = useState(true);
 
   useEffect(() => {
-    if (user) {
-      loadProjects();
-    }
+    loadProjects();
   }, [user]);
 
   const loadProjects = async () => {
-    if (!user) return;
+    const userId = user?.uid || 'guest';
     try {
-      const data = await projectService.getProjectsByUser(user.uid);
+      const data = await projectService.getProjectsByUser(userId);
       setProjects(data);
     } catch (err) {
       console.error(err);
@@ -36,7 +34,7 @@ export function Dashboard() {
       id,
       name: `Diseño ${template.name}`,
       type: template.type,
-      ownerId: user?.uid || '',
+      ownerId: user?.uid || 'guest',
       createdAt: Date.now(),
       updatedAt: Date.now(),
       canvasData: {
@@ -63,7 +61,7 @@ export function Dashboard() {
     if (!window.confirm('¿Estás seguro de que quieres eliminar este proyecto?')) return;
     
     try {
-      await projectService.deleteProject(id);
+      await projectService.deleteProject(id, user?.uid || 'guest');
       setProjects(projects.filter(p => p.id !== id));
       toast.success('Proyecto eliminado');
     } catch (err) {

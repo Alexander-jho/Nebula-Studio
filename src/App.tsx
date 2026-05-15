@@ -16,24 +16,31 @@ import { Loader2 } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 
 export default function App() {
-  const { user, setUser, loading, setLoading, activeProject } = useStore();
+  const { user, setUser, isGuest, setIsGuest, loading, setLoading, activeProject } = useStore();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
+      if (user) setIsGuest(false); // If they log in, they are not a guest anymore
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [setUser, setLoading]);
+  }, [setUser, setIsGuest, setLoading]);
 
   const handleLogin = async () => {
     try {
       await loginWithGoogle();
       toast.success('¡Bienvenido a Nebula Studio!');
     } catch (err: any) {
-      toast.error(err.message || 'Error al iniciar sesión. Inténtalo de nuevo.');
+      toast.error('Error al iniciar sesión. Entrando como invitado...');
+      setIsGuest(true);
       console.error(err);
     }
+  };
+
+  const handleGuestEntry = () => {
+    setIsGuest(true);
+    toast.info('Entrando como invitado');
   };
 
   if (loading) {
@@ -44,10 +51,10 @@ export default function App() {
     );
   }
 
-  if (!user) {
+  if (!user && !isGuest) {
     return (
       <>
-        <LandingPage onLogin={handleLogin} />
+        <LandingPage onLogin={handleLogin} onGuestMode={handleGuestEntry} />
         <Toaster theme="dark" position="bottom-right" />
       </>
     );
