@@ -1,0 +1,44 @@
+{
+  "entities": {
+    "projects": {
+      "title": "Design Project",
+      "description": "A design canvas project created by a user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" },
+        "canvasData": { "type": "object" },
+        "thumbnail": { "type": "string" },
+        "isPublic": { "type": "boolean" }
+      },
+      "required": ["id", "name", "ownerId", "canvasData", "createdAt"]
+    },
+    "userProfiles": {
+      "title": "User Profile",
+      "description": "User account information and workspace settings",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "workspaceId": { "type": "string" }
+      },
+      "required": ["uid", "email"]
+    }
+  },
+  "firestore": {
+    "projects/{projectId}": {
+      "schema": "projects",
+      "description": "User design projects"
+    },
+    "users/{userId}": {
+      "schema": "userProfiles",
+      "description": "Private user profiles"
+    }
+  }
+}

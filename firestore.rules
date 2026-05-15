@@ -1,0 +1,84 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // -------------------------------------------------------------------------
+    // HELPERS
+    // -------------------------------------------------------------------------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // -------------------------------------------------------------------------
+    // DEFAULT DENY
+    // -------------------------------------------------------------------------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // PROJECTS Rules
+    // -------------------------------------------------------------------------
+    function isValidProject(data) {
+      return data.keys().hasAll(['id', 'name', 'ownerId', 'canvasData', 'createdAt', 'updatedAt']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.name is string && data.name.size() <= 100 &&
+             data.ownerId == request.auth.uid &&
+             data.canvasData is map &&
+             data.createdAt is number &&
+             data.updatedAt is number;
+    }
+
+    match /projects/{projectId} {
+      allow get: if isSignedIn() && (existing().ownerId == request.auth.uid || existing().isPublic == true);
+      allow list: if isSignedIn() && (resource.data.ownerId == request.auth.uid || resource.data.isPublic == true);
+      
+      allow create: if isSignedIn() && 
+                    isValidId(projectId) && 
+                    isValidProject(incoming()) &&
+                    incoming().createdAt == request.time.toMillis();
+      
+      allow update: if isSignedIn() && 
+                    isValidProject(incoming()) && 
+                    isOwner(existing().ownerId) &&
+                    incoming().ownerId == existing().ownerId &&
+                    incoming().createdAt == existing().createdAt &&
+                    incoming().updatedAt > existing().updatedAt &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['name', 'canvasData', 'thumbnail', 'isPublic', 'updatedAt']);
+      
+      allow delete: if isOwner(existing().ownerId);
+    }
+
+    // -------------------------------------------------------------------------
+    // USER PROFILES Rules
+    // -------------------------------------------------------------------------
+    function isValidProfile(data) {
+      return data.uid == request.auth.uid &&
+             data.email is string && data.email.size() <= 256;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidProfile(incoming());
+      allow update: if isOwner(userId) && 
+                    isValidProfile(incoming()) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'workspaceId', 'username']);
+    }
+  }
+}
