@@ -52,11 +52,18 @@ npm run build
 npm start
 ```
 
-## Estructura del Proyecto
-- `/src/components`: UI modular con Tailwind CSS y Framer Motion.
-- `/src/lib`: Integración con Firebase.
-- `/server.ts`: Servidor backend Express con proxy para Gemini AI.
-- `firestore.rules`: Reglas de seguridad profesionales para producción.
+## Troubleshooting
 
-## Créditos
-Desarrollado con ❤️ por Nebula Team.
+### "Error al iniciar sesión" (Login Failed)
+Si recibes un error al intentar iniciar sesión:
+1. **Dominios Autorizados**: Asegúrate de que el dominio donde estás ejecutando la app (ej. `localhost` o tu URL de despliegue) esté en la lista de **Dominios Autorizados** en la Firebase Console > Authentication > Settings.
+2. **Método de Inicio de Sesión**: Asegúrate de que **Google** esté habilitado como proveedor en Firebase Console > Authentication > Sign-in method.
+3. **Bloqueo de Popups**: Algunos navegadores bloquean las ventanas emergentes. Asegúrate de permitir popups para el sitio.
+
+### Errores de Permisos (Firestore)
+Si no puedes guardar o crear proyectos, asegúrate de haber desplegado las reglas de seguridad:
+```bash
+# Si tienes firebase-tools instalado
+firebase deploy --only firestore:rules
+```
+O copia el contenido de `firestore.rules` y pégalo directamente en la sección de "Rules" de Firestore en tu consola de Firebase.

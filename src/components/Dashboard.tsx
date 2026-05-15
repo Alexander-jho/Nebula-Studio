@@ -1,16 +1,40 @@
+import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { DESIGN_TEMPLATES } from '../types';
+import { DESIGN_TEMPLATES, Project } from '../types';
 import { useStore } from '../store';
-import { Plus, Clock, Star, Trash2, Folder, LayoutGrid, List } from 'lucide-react';
+import { Plus, Clock, Star, Trash2, Folder, LayoutGrid, List, Loader2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
+import { projectService } from '../lib/projectService';
+import { toast } from 'sonner';
 
 export function Dashboard() {
   const { setActiveProject, user } = useStore();
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState(true);
 
-  const handleCreateProject = (template: any) => {
+  useEffect(() => {
+    if (user) {
+      loadProjects();
+    }
+  }, [user]);
+
+  const loadProjects = async () => {
+    if (!user) return;
+    try {
+      const data = await projectService.getProjectsByUser(user.uid);
+      setProjects(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingProjects(false);
+    }
+  };
+
+  const handleCreateProject = async (template: any) => {
+    const id = uuidv4();
     const newProject = {
-      id: uuidv4(),
-      name: `Untitled ${template.name}`,
+      id,
+      name: `Diseño ${template.name}`,
       type: template.type,
       ownerId: user?.uid || '',
       createdAt: Date.now(),
@@ -23,7 +47,28 @@ export function Dashboard() {
         height: template.height
       }
     };
-    setActiveProject(newProject);
+
+    try {
+      await projectService.createProject(newProject);
+      setActiveProject(newProject as Project);
+      toast.success('Proyecto creado correctamente');
+    } catch (err) {
+      toast.error('Error al crear el proyecto');
+      console.error(err);
+    }
+  };
+
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (!window.confirm('¿Estás seguro de que quieres eliminar este proyecto?')) return;
+    
+    try {
+      await projectService.deleteProject(id);
+      setProjects(projects.filter(p => p.id !== id));
+      toast.success('Proyecto eliminado');
+    } catch (err) {
+      toast.error('Error al eliminar');
+    }
   };
 
   return (
@@ -88,27 +133,50 @@ export function Dashboard() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
-              <motion.div 
-                key={i}
-                whileHover={{ y: -4 }}
-                className="group cursor-pointer"
-              >
-                <div className="aspect-video bg-[#111114] border border-[#222] rounded-xl mb-3 flex items-center justify-center p-4 relative overflow-hidden">
-                   <div className="w-full h-full bg-[#1A1A1E] rounded shadow-inner overflow-hidden flex items-center justify-center">
-                      <div className="w-12 h-0.5 bg-[#333] rounded-full opacity-50" />
-                   </div>
-                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-                <p className="text-sm font-medium text-white group-hover:text-[#8B5CF6] transition-colors line-clamp-1">Diseño sin título {i}</p>
-                <div className="flex items-center justify-between mt-0.5">
-                  <p className="text-[11px] text-[#555]">Editado hace {i * 2}h</p>
-                  <button className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[#1F1F23] rounded transition-all">
-                    <Star className="w-3.5 h-3.5 text-zinc-600" />
-                  </button>
-                </div>
-              </motion.div>
-            ))}
+            {loadingProjects ? (
+              <div className="col-span-full h-32 flex items-center justify-center">
+                <Loader2 className="w-6 h-6 text-zinc-500 animate-spin" />
+              </div>
+            ) : projects.length === 0 ? (
+              <div className="col-span-full h-32 border border-dashed border-[#222] rounded-2xl flex flex-col items-center justify-center text-[#555]">
+                <Folder className="w-8 h-8 mb-2 opacity-20" />
+                <p className="text-sm">Aún no tienes proyectos</p>
+              </div>
+            ) : (
+              projects.map((project) => (
+                <motion.div 
+                  key={project.id}
+                  whileHover={{ y: -4 }}
+                  onClick={() => setActiveProject(project)}
+                  className="group cursor-pointer"
+                >
+                  <div className="aspect-video bg-[#111114] border border-[#222] rounded-xl mb-3 flex items-center justify-center p-4 relative overflow-hidden">
+                    {project.thumbnail ? (
+                      <img src={project.thumbnail} className="w-full h-full object-cover rounded shadow-inner" alt={project.name} />
+                    ) : (
+                      <div className="w-full h-full bg-[#1A1A1E] rounded shadow-inner overflow-hidden flex items-center justify-center">
+                        <div className="w-12 h-0.5 bg-[#333] rounded-full opacity-50" />
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-end p-2">
+                       <button 
+                        onClick={(e) => handleDelete(e, project.id)}
+                        className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg backdrop-blur-sm transition-all"
+                       >
+                         <Trash2 className="w-4 h-4" />
+                       </button>
+                    </div>
+                  </div>
+                  <p className="text-sm font-medium text-white group-hover:text-[#8B5CF6] transition-colors line-clamp-1">{project.name}</p>
+                  <div className="flex items-center justify-between mt-0.5">
+                    <p className="text-[11px] text-[#555]">Editado {new Date(project.updatedAt).toLocaleDateString()}</p>
+                    <button className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[#1F1F23] rounded transition-all">
+                      <Star className="w-3.5 h-3.5 text-zinc-600" />
+                    </button>
+                  </div>
+                </motion.div>
+              ))
+            )}
           </div>
 
           <section className="mt-16">

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Canvas as FabricCanvas } from 'fabric';
 import { 
   ChevronLeft, 
@@ -5,12 +6,14 @@ import {
   Redo2, 
   Download, 
   Share2, 
-  Play, 
   Cloud,
-  Settings
+  Save,
+  Loader2
 } from 'lucide-react';
 import { useStore } from '../store';
 import confetti from 'canvas-confetti';
+import { projectService } from '../lib/projectService';
+import { toast } from 'sonner';
 
 interface TopBarProps {
   canvas: FabricCanvas | null;
@@ -18,19 +21,34 @@ interface TopBarProps {
 
 export function TopBar({ canvas }: TopBarProps) {
   const { setActiveProject, activeProject } = useStore();
+  const [saving, setSaving] = useState(false);
 
   const handleExport = () => {
     if (!canvas) return;
     const dataURL = canvas.toDataURL({
-      format: 'png',
-      quality: 1,
-      multiplier: 1
+      multiplier: 2 // High quality
     });
     const link = document.createElement('a');
-    link.download = `${activeProject?.name || 'design'}.png`;
+    link.download = `${activeProject?.name || 'nebula-design'}.png`;
     link.href = dataURL;
     link.click();
     confetti();
+    toast.success('Diseño exportado en HD');
+  };
+
+  const handleSave = async () => {
+    if (!canvas || !activeProject) return;
+    setSaving(true);
+    try {
+      const json = canvas.toJSON();
+      const thumbnail = canvas.toDataURL({ multiplier: 0.1 });
+      await projectService.saveProject(activeProject.id, json, thumbnail);
+      toast.success('Cambios guardados');
+    } catch (err) {
+      toast.error('Error al guardar');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -57,6 +75,15 @@ export function TopBar({ canvas }: TopBarProps) {
             <button className="p-2 text-[#555] hover:text-white disabled:opacity-20 hover:bg-[#111114] rounded-md transition-all"><Redo2 className="w-4 h-4" /></button>
          </div>
 
+         <button 
+           onClick={handleSave}
+           disabled={saving}
+           className="px-4 py-1.5 rounded-lg text-xs font-bold border border-[#1F1F23] hover:border-[#333] hover:bg-[#111114] flex items-center gap-2 transition-all uppercase tracking-widest text-[#A1A1AA] disabled:opacity-50"
+         >
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            {saving ? 'Saving...' : 'Save'}
+         </button>
+         
          <button className="px-4 py-1.5 rounded-lg text-xs font-bold border border-[#1F1F23] hover:border-[#333] hover:bg-[#111114] flex items-center gap-2 transition-all uppercase tracking-widest text-[#A1A1AA]">
             <Share2 className="w-3.5 h-3.5" />
             Share

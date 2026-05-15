@@ -30,8 +30,8 @@ export default function App() {
     try {
       await loginWithGoogle();
       toast.success('¡Bienvenido a Nebula Studio!');
-    } catch (err) {
-      toast.error('Error al iniciar sesión. Inténtalo de nuevo.');
+    } catch (err: any) {
+      toast.error(err.message || 'Error al iniciar sesión. Inténtalo de nuevo.');
       console.error(err);
     }
   };
