@@ -1,66 +1,69 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import * as fabric from 'fabric';
+import { Canvas as FabricCanvas } from 'fabric';
 import { useStore } from '../store';
 
 interface CanvasProps {
-  onCanvasReady: (canvas: fabric.Canvas) => void;
+  onCanvasReady: (canvas: FabricCanvas) => void;
 }
 
 export const Canvas = ({ onCanvasReady }: CanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { activeProject } = useStore();
-  const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
+  const fabricCanvasRef = useRef<FabricCanvas | null>(null);
 
-  const initCanvas = useCallback(() => {
+  const initCanvas = useCallback(async () => {
     if (!canvasRef.current || !containerRef.current || !activeProject) return;
 
-    // Dispose old canvas if anyway
+    // Dispose old canvas if any
     if (fabricCanvasRef.current) {
-      fabricCanvasRef.current.dispose();
+      await fabricCanvasRef.current.dispose();
     }
 
-    const canvas = new fabric.Canvas(canvasRef.current, {
+    const canvas = new FabricCanvas(canvasRef.current, {
       width: activeProject.canvasData.width,
       height: activeProject.canvasData.height,
       backgroundColor: activeProject.canvasData.background || '#ffffff',
       preserveObjectStacking: true,
-      stopContextMenu: true,
     });
 
     fabricCanvasRef.current = canvas;
 
     // Load state if exists
     if (activeProject.canvasData.objects && activeProject.canvasData.objects.length > 0) {
-      canvas.loadFromJSON(activeProject.canvasData, () => {
+      try {
+        await canvas.loadFromJSON(activeProject.canvasData);
         canvas.renderAll();
-      });
+      } catch (err) {
+        console.error('Error loading canvas sync:', err);
+      }
     }
 
     // Set zoom to fit container
-    const width = containerRef.current.clientWidth;
-    const height = containerRef.current.clientHeight;
-    const scale = Math.min(
-      (width - 40) / activeProject.canvasData.width,
-      (height - 40) / activeProject.canvasData.height
-    );
-    
-    canvas.setZoom(scale);
-    canvas.setDimensions({
-        width: activeProject.canvasData.width * scale,
-        height: activeProject.canvasData.height * scale
-    }, { backstoreOnly: false });
+    const updateSize = () => {
+      if (!containerRef.current || !fabricCanvasRef.current) return;
+      const width = containerRef.current.clientWidth;
+      const height = containerRef.current.clientHeight;
+      const scale = Math.min(
+        (width - 80) / activeProject.canvasData.width,
+        (height - 80) / activeProject.canvasData.height
+      );
+      
+      canvas.setZoom(scale);
+      canvas.setDimensions({
+          width: activeProject.canvasData.width * scale,
+          height: activeProject.canvasData.height * scale
+      });
+    };
 
-    // Enable snapping
-    canvas.on('object:moving', (options) => {
-        const obj = options.target;
-        if (!obj) return;
-        
-        // Simple snapping to grid or guides could be added here
-        obj.setCoords();
-    });
+    updateSize();
+    window.addEventListener('resize', updateSize);
 
     onCanvasReady(canvas);
+
+    return () => {
+      window.removeEventListener('resize', updateSize);
+    };
   }, [activeProject, onCanvasReady]);
 
   useEffect(() => {

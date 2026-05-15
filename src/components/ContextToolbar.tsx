@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import * as fabric from 'fabric';
+import { 
+  Canvas as FabricCanvas, 
+  FabricObject, 
+  IText 
+} from 'fabric';
 import { 
   Type, 
   Palette, 
@@ -14,8 +18,8 @@ import {
 } from 'lucide-react';
 
 interface ContextToolbarProps {
-  canvas: fabric.Canvas | null;
-  activeObject: fabric.Object | null;
+  canvas: FabricCanvas | null;
+  activeObject: FabricObject | null;
 }
 
 export function ContextToolbar({ canvas, activeObject }: ContextToolbarProps) {
@@ -25,8 +29,8 @@ export function ContextToolbar({ canvas, activeObject }: ContextToolbarProps) {
   useEffect(() => {
     if (activeObject) {
       setFill(activeObject.get('fill') as string || '#ffffff');
-      if (activeObject.type === 'i-text') {
-        setFontSize((activeObject as fabric.IText).fontSize);
+      if (activeObject instanceof IText) {
+        setFontSize(activeObject.fontSize);
       }
     }
   }, [activeObject]);
@@ -47,7 +51,7 @@ export function ContextToolbar({ canvas, activeObject }: ContextToolbarProps) {
 
   const cloneObject = () => {
     if (!canvas || !activeObject) return;
-    activeObject.clone().then((cloned: fabric.Object) => {
+    activeObject.clone().then((cloned: FabricObject) => {
         cloned.set({
             left: (cloned.left || 0) + 20,
             top: (cloned.top || 0) + 20,
@@ -72,7 +76,7 @@ export function ContextToolbar({ canvas, activeObject }: ContextToolbarProps) {
          ))}
       </div>
 
-      {activeObject?.type === 'i-text' && (
+       {activeObject instanceof IText && (
         <div className="flex items-center gap-1.5 px-2 border-r border-[#1F1F23]">
            <input 
              type="number" 
@@ -80,7 +84,7 @@ export function ContextToolbar({ canvas, activeObject }: ContextToolbarProps) {
              onChange={(e) => {
                const val = parseInt(e.target.value);
                setFontSize(val);
-               (activeObject as fabric.IText).set('fontSize', val);
+               activeObject.set('fontSize', val);
                canvas?.renderAll();
              }}
              className="w-14 bg-[#0A0A0C] text-[11px] font-bold border border-[#1F1F23] rounded-lg px-2 py-1 text-white focus:outline-none focus:border-[#444]"

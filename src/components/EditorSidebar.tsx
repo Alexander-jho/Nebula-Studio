@@ -1,5 +1,11 @@
 import { useState } from 'react';
-import * as fabric from 'fabric';
+import { 
+  Canvas as FabricCanvas, 
+  Rect, 
+  Circle, 
+  IText, 
+  FabricImage 
+} from 'fabric';
 import { 
   Layout, 
   Type, 
@@ -13,7 +19,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 
 interface SidebarProps {
-  canvas: fabric.Canvas | null;
+  canvas: FabricCanvas | null;
 }
 
 enum SidebarTab {
@@ -29,7 +35,7 @@ export function Sidebar({ canvas }: SidebarProps) {
 
   const addRect = () => {
     if (!canvas) return;
-    const rect = new fabric.Rect({
+    const rect = new Rect({
       left: 100,
       top: 100,
       fill: '#8B5CF6',
@@ -45,7 +51,7 @@ export function Sidebar({ canvas }: SidebarProps) {
 
   const addCircle = () => {
     if (!canvas) return;
-    const circle = new fabric.Circle({
+    const circle = new Circle({
       left: 150,
       top: 150,
       fill: '#D946EF',
@@ -58,7 +64,7 @@ export function Sidebar({ canvas }: SidebarProps) {
 
   const addText = () => {
     if (!canvas) return;
-    const text = new fabric.IText('Nebula Studio', {
+    const text = new IText('Nebula Studio', {
       left: 100,
       top: 100,
       fontFamily: 'Inter',
@@ -190,7 +196,7 @@ function ElementButton({ icon, label, onClick }: { icon: React.ReactNode, label:
   );
 }
 
-function AiImageGenerator({ canvas }: { canvas: fabric.Canvas | null }) {
+function AiImageGenerator({ canvas }: { canvas: FabricCanvas | null }) {
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -205,7 +211,7 @@ function AiImageGenerator({ canvas }: { canvas: fabric.Canvas | null }) {
       });
       const data = await response.json();
       if (data.imageUrl) {
-        const img = await fabric.FabricImage.fromURL(data.imageUrl, { crossOrigin: 'anonymous' });
+        const img = await FabricImage.fromURL(data.imageUrl, { crossOrigin: 'anonymous' });
         img.scaleToWidth(canvas.width! / 1.5);
         canvas.add(img);
         canvas.centerObject(img);
@@ -231,7 +237,7 @@ function AiImageGenerator({ canvas }: { canvas: fabric.Canvas | null }) {
       });
       const data = await response.json();
       if (data.imageUrl) {
-        const img = await fabric.FabricImage.fromURL(data.imageUrl, { crossOrigin: 'anonymous' });
+        const img = await FabricImage.fromURL(data.imageUrl, { crossOrigin: 'anonymous' });
         img.scaleToWidth(200);
         canvas.add(img);
         canvas.centerObject(img);

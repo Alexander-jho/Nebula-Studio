@@ -1,4 +1,4 @@
-import * as fabric from 'fabric';
+import { Canvas as FabricCanvas } from 'fabric';
 import { 
   ChevronLeft, 
   Undo2, 
@@ -13,7 +13,7 @@ import { useStore } from '../store';
 import confetti from 'canvas-confetti';
 
 interface TopBarProps {
-  canvas: fabric.Canvas | null;
+  canvas: FabricCanvas | null;
 }
 
 export function TopBar({ canvas }: TopBarProps) {

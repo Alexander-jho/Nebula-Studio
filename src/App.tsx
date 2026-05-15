@@ -13,6 +13,8 @@ import { Dashboard } from './components/Dashboard';
 import { Editor } from './components/Editor';
 import { Loader2 } from 'lucide-react';
 
+import { Toaster, toast } from 'sonner';
+
 export default function App() {
   const { user, setUser, loading, setLoading, activeProject } = useStore();
 
@@ -24,26 +26,38 @@ export default function App() {
     return () => unsubscribe();
   }, [setUser, setLoading]);
 
+  const handleLogin = async () => {
+    try {
+      await loginWithGoogle();
+      toast.success('¡Bienvenido a Nebula Studio!');
+    } catch (err) {
+      toast.error('Error al iniciar sesión. Inténtalo de nuevo.');
+      console.error(err);
+    }
+  };
+
   if (loading) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-[#09090b]">
-        <Loader2 className="w-8 h-8 text-white animate-spin" />
+      <div className="h-screen w-screen flex items-center justify-center bg-[#050505]">
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-[#6366F1] to-[#D946EF] animate-spin" />
       </div>
     );
   }
 
   if (!user) {
-    return <LandingPage onLogin={loginWithGoogle} />;
-  }
-
-  if (activeProject) {
-    return <Editor />;
+    return (
+      <>
+        <LandingPage onLogin={handleLogin} />
+        <Toaster theme="dark" position="bottom-right" />
+      </>
+    );
   }
 
   return (
     <div className="min-h-screen bg-[#050505] text-[#E0E0E0] font-sans selection:bg-[#8B5CF6]/30">
       <Navbar />
-      <Dashboard />
+      {activeProject ? <Editor /> : <Dashboard />}
+      <Toaster theme="dark" position="bottom-right" />
     </div>
   );
 }
