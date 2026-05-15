@@ -20,7 +20,7 @@ interface TopBarProps {
 }
 
 export function TopBar({ canvas }: TopBarProps) {
-  const { setActiveProject, activeProject } = useStore();
+  const { setActiveProject, activeProject, undo, redo, historyIndex, history } = useStore();
   const [saving, setSaving] = useState(false);
 
   const handleExport = () => {
@@ -71,8 +71,20 @@ export function TopBar({ canvas }: TopBarProps) {
 
       <div className="flex items-center gap-3">
          <div className="flex items-center border-r border-[#1F1F23] pr-3 mr-3 gap-1">
-            <button className="p-2 text-[#555] hover:text-white disabled:opacity-20 hover:bg-[#111114] rounded-md transition-all"><Undo2 className="w-4 h-4" /></button>
-            <button className="p-2 text-[#555] hover:text-white disabled:opacity-20 hover:bg-[#111114] rounded-md transition-all"><Redo2 className="w-4 h-4" /></button>
+            <button 
+              onClick={undo}
+              disabled={historyIndex <= 0}
+              className="p-2 text-[#555] hover:text-white disabled:opacity-20 hover:bg-[#111114] rounded-md transition-all"
+            >
+              <Undo2 className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={redo}
+              disabled={historyIndex >= history.length - 1}
+              className="p-2 text-[#555] hover:text-white disabled:opacity-20 hover:bg-[#111114] rounded-md transition-all"
+            >
+              <Redo2 className="w-4 h-4" />
+            </button>
          </div>
 
          <button 
