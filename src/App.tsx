@@ -62,7 +62,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#050505] text-[#E0E0E0] font-sans selection:bg-[#8B5CF6]/30">
-      <Navbar />
+      {!activeProject && <Navbar />}
       {activeProject ? <Editor /> : <Dashboard />}
       <Toaster theme="dark" position="bottom-right" />
     </div>

@@ -2,13 +2,16 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // -------------------------------------------------------------------------
-    // HELPERS
-    // -------------------------------------------------------------------------
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 1. Helpers
     function isSignedIn() {
       return request.auth != null;
     }
-
+    
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
@@ -25,60 +28,42 @@ service cloud.firestore {
       return resource.data;
     }
 
-    // -------------------------------------------------------------------------
-    // DEFAULT DENY
-    // -------------------------------------------------------------------------
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
-    // -------------------------------------------------------------------------
-    // PROJECTS Rules
-    // -------------------------------------------------------------------------
-    function isValidProject(data) {
-      return data.keys().hasAll(['id', 'name', 'ownerId', 'canvasData', 'createdAt', 'updatedAt']) &&
-             data.id is string && data.id.size() <= 128 &&
-             data.name is string && data.name.size() <= 100 &&
-             data.ownerId == request.auth.uid &&
-             data.canvasData is map &&
-             data.createdAt is number &&
-             data.updatedAt is number;
-    }
-
+    // 2. Projects Collection
     match /projects/{projectId} {
+      function isValidProject(data) {
+        return data.keys().hasAll(['id', 'name', 'ownerId', 'canvasData', 'createdAt']) &&
+               data.id is string && data.id.size() <= 128 &&
+               data.name is string && data.name.size() > 0 && data.name.size() <= 200 &&
+               data.ownerId == request.auth.uid &&
+               data.canvasData is map &&
+               data.createdAt == request.time;
+      }
+
       allow get: if isSignedIn() && (existing().ownerId == request.auth.uid || existing().isPublic == true);
-      allow list: if isSignedIn() && (resource.data.ownerId == request.auth.uid || resource.data.isPublic == true);
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
       
-      allow create: if isSignedIn() && 
-                    isValidId(projectId) && 
-                    isValidProject(incoming()) &&
-                    incoming().createdAt == request.time.toMillis();
+      allow create: if isSignedIn() && isValidId(projectId) && isValidProject(incoming());
       
-      allow update: if isSignedIn() && 
-                    isValidProject(incoming()) && 
-                    isOwner(existing().ownerId) &&
-                    incoming().ownerId == existing().ownerId &&
-                    incoming().createdAt == existing().createdAt &&
-                    incoming().updatedAt > existing().updatedAt &&
-                    incoming().diff(existing()).affectedKeys().hasOnly(['name', 'canvasData', 'thumbnail', 'isPublic', 'updatedAt']);
-      
+      allow update: if isOwner(existing().ownerId) && 
+                      isValidId(projectId) &&
+                      incoming().ownerId == existing().ownerId &&
+                      incoming().createdAt == existing().createdAt &&
+                      incoming().diff(existing()).affectedKeys().hasOnly(['name', 'canvasData', 'thumbnail', 'updatedAt', 'isPublic']) &&
+                      incoming().updatedAt == request.time;
+                      
       allow delete: if isOwner(existing().ownerId);
     }
 
-    // -------------------------------------------------------------------------
-    // USER PROFILES Rules
-    // -------------------------------------------------------------------------
-    function isValidProfile(data) {
-      return data.uid == request.auth.uid &&
-             data.email is string && data.email.size() <= 256;
-    }
-
+    // 3. User Profiles
     match /users/{userId} {
+      function isValidProfile(data) {
+        return data.keys().hasAll(['uid', 'email']) &&
+               data.uid == request.auth.uid &&
+               data.email is string && data.email.size() <= 200;
+      }
+
       allow get: if isOwner(userId);
-      allow create: if isOwner(userId) && isValidProfile(incoming());
-      allow update: if isOwner(userId) && 
-                    isValidProfile(incoming()) &&
-                    incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'workspaceId', 'username']);
+      allow create, update: if isOwner(userId) && isValidProfile(incoming());
     }
   }
 }

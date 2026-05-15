@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Canvas as FabricCanvas, FabricObject, ActiveSelection } from 'fabric';
+import { Canvas as FabricCanvas, FabricObject, ActiveSelection, FabricImage, Group, Point } from 'fabric';
 import { useStore } from '../store';
 
 interface CanvasProps {
@@ -82,7 +82,7 @@ export const Canvas = ({ onCanvasReady }: CanvasProps) => {
       if (zoom < 0.01) zoom = 0.01;
       // If alt key is pressed, zoom to mouse point
       if (opt.e.altKey) {
-        canvas.zoomToPoint({ x: opt.e.offsetX, y: opt.e.offsetY }, zoom);
+        canvas.zoomToPoint(new Point(opt.e.offsetX, opt.e.offsetY), zoom);
       } else {
         canvas.setZoom(zoom);
       }
@@ -177,15 +177,33 @@ export const Canvas = ({ onCanvasReady }: CanvasProps) => {
             });
           }
           break;
+        case 'g':
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            const currentActive = fabricCanvasRef.current?.getActiveObject();
+            if (currentActive instanceof ActiveSelection) {
+              (currentActive as any).toGroup();
+              fabricCanvasRef.current?.requestRenderAll();
+            } else if (currentActive instanceof Group) {
+              (currentActive as any).toActiveSelection();
+              fabricCanvasRef.current?.requestRenderAll();
+            }
+          }
+          break;
         case 'c':
           if (e.ctrlKey || e.metaKey) {
-            active.clone().then((cloned: FabricObject) => {
-               (canvas as any)._clipboard = cloned;
-            });
+            e.preventDefault();
+            const objToClone = canvas.getActiveObject();
+            if (objToClone) {
+               objToClone.clone().then((cloned: FabricObject) => {
+                 (canvas as any)._clipboard = cloned;
+               });
+            }
           }
           break;
         case 'v':
           if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
             const clipboard = (canvas as any)._clipboard;
             if (clipboard) {
               clipboard.clone().then((clonedObj: FabricObject) => {
@@ -195,16 +213,14 @@ export const Canvas = ({ onCanvasReady }: CanvasProps) => {
                   top: (clonedObj.top || 0) + 10,
                   evented: true,
                 });
-                if (clonedObj.type === 'activeSelection') {
+                if ((clonedObj as any).type === 'activeSelection') {
                   clonedObj.canvas = canvas;
-                  (clonedObj as any).forEachObject((obj: any) => canvas.add(obj));
-                  clonedObj.setCoords();
+                  (clonedObj as any).forEachObject((subObj: any) => canvas.add(subObj));
+                  canvas.setActiveObject(clonedObj);
                 } else {
                   canvas.add(clonedObj);
+                  canvas.setActiveObject(clonedObj);
                 }
-                (canvas as any)._clipboard.top += 10;
-                (canvas as any)._clipboard.left += 10;
-                canvas.setActiveObject(clonedObj);
                 canvas.requestRenderAll();
               });
             }
@@ -234,20 +250,37 @@ export const Canvas = ({ onCanvasReady }: CanvasProps) => {
     const handleDrop = async (e: React.DragEvent) => {
       e.preventDefault();
       const files = Array.from(e.dataTransfer.files);
-      if (files.length === 0 || !canvas) return;
+      if (!fabricCanvasRef.current) return;
 
-      for (const file of files) {
-        if (file.type.startsWith('image/')) {
-          const reader = new FileReader();
-          reader.onload = async (f) => {
-            const img = await FabricImage.fromURL(f.target?.result as string);
-            img.scaleToWidth(200);
-            canvas.add(img);
-            canvas.centerObject(img);
-            canvas.setActiveObject(img);
-            canvas.renderAll();
-          };
-          reader.readAsDataURL(file);
+      if (files.length > 0) {
+        for (const file of files) {
+          if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = async (f) => {
+              const img = await FabricImage.fromURL(f.target?.result as string || '');
+              img.scaleToWidth(200);
+              fabricCanvasRef.current?.add(img);
+              fabricCanvasRef.current?.centerObject(img);
+              fabricCanvasRef.current?.setActiveObject(img);
+              fabricCanvasRef.current?.renderAll();
+            };
+            reader.readAsDataURL(file);
+          }
+        }
+      } else {
+        // Handle drag from sidebar (dataTransfer text/uri-list)
+        const data = e.dataTransfer.getData('text/plain');
+        if (data && data.startsWith('http')) {
+           const img = await FabricImage.fromURL(data, { crossOrigin: 'anonymous' });
+           img.scaleToWidth(200);
+           const pointer = fabricCanvasRef.current.getPointer(e.nativeEvent);
+           img.set({ 
+             left: (pointer as any).x - 100, 
+             top: (pointer as any).y - (img.height! * img.scaleY! / 2) 
+           });
+           fabricCanvasRef.current.add(img);
+           fabricCanvasRef.current.setActiveObject(img);
+           fabricCanvasRef.current.renderAll();
         }
       }
     };

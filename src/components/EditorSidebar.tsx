@@ -5,7 +5,9 @@ import {
   Circle, 
   IText, 
   FabricImage,
-  Triangle
+  Triangle,
+  PencilBrush,
+  Color
 } from 'fabric';
 import { 
   Layout, 
@@ -23,13 +25,23 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { toast } from 'sonner';
 import { DESIGN_TEMPLATES } from '../lib/templates';
+import { useStore } from '../store';
 import { fontService } from '../lib/fontService';
 
 const ICON_SETS = [
-  { name: 'Redes', icons: ['Instagram', 'Twitter', 'Facebook', 'Linkedin', 'Youtube'] },
-  { name: 'Acciones', icons: ['Heart', 'Star', 'Share', 'Download', 'Cloud'] },
-  { name: 'Negocio', icons: ['Briefcase', 'DollarSign', 'CreditCard', 'TrendingUp', 'PieChart'] }
+  { name: 'Redes Sociales', icons: [
+    { name: 'Instagram', icon: <ImageIcon className="w-5 h-5 text-pink-500" />, svg: '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-instagram"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>' },
+    { name: 'Twitter', icon: <ArrowRight className="w-5 h-5 text-blue-400" />, svg: '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-twitter"><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"/></svg>' },
+    { name: 'Facebook', icon: <ImageIcon className="w-5 h-5 text-blue-600" />, svg: '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-facebook"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>' },
+    { name: 'Youtube', icon: <Video className="w-5 h-5 text-red-500" />, svg: '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-youtube"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/></svg>' }
+  ]},
+  { name: 'Negocios & Tech', icons: [
+    { name: 'Cloud', icon: <Upload className="w-5 h-5 text-blue-300" />, svg: '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-cloud"><path d="M17.5 19c3.037 0 5.5-2.463 5.5-5.5 0-2.97-2.357-5.385-5.286-5.495A7.001 7.001 0 0 0 4 11c0 .12.003.24.01.359C1.722 12.115 0 14.358 0 17c0 3.866 3.134 7 7 7h10.5c.276 0 .5-.224.5-.5z"/></svg>' },
+    { name: 'Code', icon: <Shapes className="w-5 h-5 text-green-400" />, svg: '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-code-xml"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg>' },
+    { name: 'CPU', icon: <Square className="w-5 h-5 text-orange-400" />, svg: '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-cpu"><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/></svg>' }
+  ]}
 ];
 
 const TEXT_PRESETS = [
@@ -122,20 +134,26 @@ export function Sidebar({ canvas }: SidebarProps) {
     canvas.renderAll();
   };
 
-  const addIcon = (iconName: string) => {
+  const addIcon = (svgString: string) => {
     if (!canvas) return;
-    // We simulate an icon with text for now, in a real app would be an SVG
-    const text = new IText(iconName.substring(0, 3).toUpperCase(), {
-      left: 100,
-      top: 100,
-      fontSize: 40,
-      fontFamily: 'Inter',
-      fill: '#8B5CF6',
-      fontWeight: 'bold'
-    });
-    canvas.add(text);
-    canvas.setActiveObject(text);
-    canvas.renderAll();
+    try {
+      // Use fabric.loadSVGFromString to parse the svg string
+      (canvas as any).loadSVGFromString(svgString, (objects: any[], options: any) => {
+        const obj = (canvas as any).util.groupSVGElements(objects, options);
+        obj.set({
+          left: 100,
+          top: 100,
+          scaleX: 1,
+          scaleY: 1
+        });
+        canvas.add(obj);
+        canvas.centerObject(obj);
+        canvas.setActiveObject(obj);
+        canvas.renderAll();
+      });
+    } catch (err) {
+      console.error('Error loading SVG icon:', err);
+    }
   };
 
   const addPhoto = async (url: string) => {
@@ -165,6 +183,43 @@ export function Sidebar({ canvas }: SidebarProps) {
     canvas.add(text);
     canvas.setActiveObject(text);
     canvas.renderAll();
+  };
+
+  const toggleDrawing = () => {
+    if (!canvas) return;
+    const isDrawing = !canvas.isDrawingMode;
+    canvas.isDrawingMode = isDrawing;
+    if (isDrawing) {
+      canvas.freeDrawingBrush = new PencilBrush(canvas);
+      canvas.freeDrawingBrush.width = 5;
+      canvas.freeDrawingBrush.color = '#8B5CF6';
+    }
+    toast.info(isDrawing ? 'Modo dibujo activado' : 'Modo selección activado');
+  };
+
+  const [photoSearch, setPhotoSearch] = useState('');
+  const [searchingPhotos, setSearchingPhotos] = useState(false);
+  const [photos, setPhotos] = useState(PHOTOS_PRESETS);
+
+  const searchUnsplash = async (query: string) => {
+    if (!query) {
+      setPhotos(PHOTOS_PRESETS);
+      return;
+    }
+    setSearchingPhotos(true);
+    try {
+      // In a real app we'd use Unsplash Client ID, here we use a proxy or just simulate a good generic search
+      // For this environment, we'll use a public search endpoint if possible, or just more varied unsplash URLs
+      const results = Array.from({ length: 8 }).map((_, i) => ({
+        url: `https://source.unsplash.com/featured/?${encodeURIComponent(query)}&sig=${i}`,
+        label: `${query} ${i + 1}`
+      }));
+      setPhotos(results);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSearchingPhotos(false);
+    }
   };
 
   return (
@@ -264,6 +319,11 @@ export function Sidebar({ canvas }: SidebarProps) {
                    <ElementButton onClick={addRect} icon={<Square className="text-[#8B5CF6] w-5 h-5" />} label="Bloque" />
                    <ElementButton onClick={addCircle} icon={<CircleIcon className="text-[#D946EF] w-5 h-5" />} label="Círculo" />
                    <ElementButton onClick={addTriangle} icon={<TriangleIcon className="text-[#FACC15] w-5 h-5" />} label="Triángulo" />
+                   <ElementButton 
+                     onClick={toggleDrawing} 
+                     icon={<Palette className="text-zinc-400 w-5 h-5" />} 
+                     label="Pincel" 
+                   />
                 </div>
               </section>
 
@@ -271,14 +331,15 @@ export function Sidebar({ canvas }: SidebarProps) {
                 <section key={idx} className="space-y-3">
                   <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#555]">{set.name}</h3>
                   <div className="grid grid-cols-4 gap-2">
-                    {set.icons.map(icon => (
+                    {set.icons.map(item => (
                       <button 
-                        key={icon}
-                        onClick={() => addIcon(icon)}
-                        className="aspect-square bg-[#111114] border border-[#222] rounded-lg flex items-center justify-center hover:border-[#8B5CF6] transition-all group"
+                        key={item.name}
+                        onClick={() => addIcon(item.svg)}
+                        className="aspect-square bg-[#111114] border border-[#222] rounded-lg flex items-center justify-center hover:border-[#8B5CF6] transition-all group p-2"
+                        title={item.name}
                       >
-                         <div className="text-zinc-500 group-hover:text-white group-hover:scale-110 transition-all text-[10px] font-bold">
-                            {icon.substring(0, 3)}
+                         <div className="text-zinc-500 group-hover:text-white group-hover:scale-110 transition-all">
+                            {item.icon}
                          </div>
                       </button>
                     ))}
@@ -333,15 +394,39 @@ export function Sidebar({ canvas }: SidebarProps) {
               exit={{ opacity: 0, x: -10 }}
               className="space-y-6"
             >
-              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#555]">Biblioteca Unsplash</h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#555]">Biblioteca Multimedia</h3>
+                  <ImageIcon className="w-3.5 h-3.5 text-[#555]" />
+                </div>
+                <div className="relative group">
+                  <input 
+                    type="text" 
+                    placeholder="Buscar fotos en Unsplash..." 
+                    value={photoSearch}
+                    onChange={(e) => setPhotoSearch(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && searchUnsplash(photoSearch)}
+                    className="w-full bg-[#111114] border border-[#222] rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#444] transition-all"
+                  />
+                  <div className="absolute inset-y-0 right-3 flex items-center">
+                    <button onClick={() => searchUnsplash(photoSearch)} className="text-zinc-600 hover:text-white transition-colors">
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
-                {PHOTOS_PRESETS.map((photo, i) => (
+                {photos.map((photo, i) => (
                   <button 
                     key={i}
                     onClick={() => addPhoto(photo.url)}
                     className="relative aspect-square rounded-xl overflow-hidden border border-[#222] hover:border-[#8B5CF6] transition-all group"
                   >
                     <img src={photo.url} className="w-full h-full object-cover transition-transform group-hover:scale-110" alt={photo.label} />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                       <span className="text-[8px] font-bold text-white uppercase tracking-widest px-2 py-1 bg-black/60 rounded backdrop-blur-sm">Añadir</span>
+                    </div>
                   </button>
                 ))}
               </div>

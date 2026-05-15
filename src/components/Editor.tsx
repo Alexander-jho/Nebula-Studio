@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { Canvas as FabricCanvas, FabricObject } from 'fabric';
 import { useStore } from '../store';
+import { projectService } from '../lib/projectService';
 import { Canvas } from './Canvas';
 import { Sidebar } from './EditorSidebar';
 import { TopBar } from './TopBar';
@@ -12,6 +13,22 @@ export function Editor() {
   const { activeProject } = useStore();
   const [canvas, setCanvas] = useState<FabricCanvas | null>(null);
   const [selectedObject, setSelectedObject] = useState<FabricObject | null>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleAutosave = useCallback((c: FabricCanvas) => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    
+    saveTimeoutRef.current = setTimeout(async () => {
+      if (!activeProject) return;
+      try {
+        const json = c.toJSON();
+        const thumbnail = c.toDataURL({ multiplier: 0.1 });
+        await projectService.saveProject(activeProject.id, json, thumbnail, activeProject.ownerId);
+      } catch (err) {
+        console.error('Autosave failed:', err);
+      }
+    }, 5000);
+  }, [activeProject]);
 
   const handleCanvasReady = useCallback((c: FabricCanvas) => {
     setCanvas(c);
@@ -24,8 +41,11 @@ export function Editor() {
     c.on('selection:created', updateSelection);
     c.on('selection:updated', updateSelection);
     c.on('selection:cleared', updateSelection);
-    c.on('object:modified', updateSelection);
-  }, []);
+    c.on('object:modified', () => {
+      updateSelection();
+      handleAutosave(c);
+    });
+  }, [handleAutosave]);
 
   if (!activeProject) return null;
 
