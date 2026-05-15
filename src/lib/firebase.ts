@@ -16,6 +16,9 @@ try {
   app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
   auth = getAuth(app);
   db = getFirestore(app);
+  
+  // Link para el usuario a su consola
+  console.log("%cNebula Studio Firebase Console:", "color: #8B5CF6; font-weight: bold;", `https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/providers`);
 } catch (error) {
   console.error("Firebase initialization failed:", error);
 }
