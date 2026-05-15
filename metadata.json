@@ -1,0 +1,11 @@
+{
+  "name": "Nebula Studio",
+  "description": "A revolutionary professional design platform for graphics, video, and AI creative content.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
